@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:llme/data/workout_store.dart';
 import 'package:llme/features/calendar/calendar_page.dart';
 import 'package:llme/features/check_in/check_in_page.dart';
-import 'package:llme/features/trends/trends_page.dart';
+import 'package:llme/features/profile/profile_page.dart';
 import 'package:llme/shared/widgets/floating_bottom_nav.dart';
 
 class AppHome extends StatefulWidget {
@@ -48,7 +48,7 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
       final pages = [
         CalendarPage(store: widget.store),
         CheckInPage(store: widget.store),
-        TrendsPage(store: widget.store),
+        ProfilePage(store: widget.store),
       ];
       return Scaffold(
         extendBody: true,

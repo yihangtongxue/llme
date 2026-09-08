@@ -6,8 +6,9 @@ import 'package:llme/data/workout_store.dart';
 import 'package:llme/shared/widgets/workout_ui.dart';
 
 class TrendsPage extends StatefulWidget {
-  const TrendsPage({super.key, required this.store});
+  const TrendsPage({super.key, required this.store, this.showHeading = true});
   final WorkoutStore store;
+  final bool showHeading;
   @override
   State<TrendsPage> createState() => _TrendsPageState();
 }
@@ -39,7 +40,7 @@ class _TrendsPageState extends State<TrendsPage> {
 
     return PageContent(
       children: [
-        const PageHeading('趋势', null),
+        if (widget.showHeading) const PageHeading('训练数据', null),
         Surface(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -19,7 +19,7 @@ class FloatingBottomNav extends StatelessWidget {
   static const _items = <({String label, IconData icon})>[
     (label: '日历', icon: CupertinoIcons.calendar),
     (label: '打卡', icon: CupertinoIcons.check_mark_circled),
-    (label: '趋势', icon: CupertinoIcons.chart_bar),
+    (label: '我的', icon: CupertinoIcons.person_crop_circle),
   ];
 
   @override
