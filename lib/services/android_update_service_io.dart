@@ -129,7 +129,7 @@ class AndroidUpdateService {
 
   static const _channel = MethodChannel('com.yihang.llme/android_update');
   static final _manifestUri = Uri.parse(
-    'https://api.github.com/repos/yihangtongxue/llme/contents/'
+    'https://gitee.com/api/v5/repos/yihangtongxue/llme-releases/contents/'
     '.release-hub/updates/stable.json?ref=main',
   );
 
@@ -166,7 +166,6 @@ class AndroidUpdateService {
       final request = await client.getUrl(_manifestUri).timeout(
         const Duration(seconds: 8),
       );
-      request.headers.set(HttpHeaders.acceptHeader, 'application/vnd.github+json');
       request.headers.set(HttpHeaders.cacheControlHeader, 'no-cache');
       final response = await request.close().timeout(const Duration(seconds: 8));
       if (response.statusCode != HttpStatus.ok) {

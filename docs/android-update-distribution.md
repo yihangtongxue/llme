@@ -3,7 +3,7 @@
 Android 客户端启动后会读取以下公开配置：
 
 ```text
-https://api.github.com/repos/yihangtongxue/llme/contents/.release-hub/updates/stable.json?ref=main
+https://gitee.com/api/v5/repos/yihangtongxue/llme-releases/contents/.release-hub/updates/stable.json?ref=main
 ```
 
 每次发布版本时：
