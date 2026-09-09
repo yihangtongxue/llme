@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:llme/data/workout_store.dart';
 import 'package:llme/features/trends/trends_page.dart';
 import 'package:llme/shared/widgets/workout_ui.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key, required this.store});
@@ -42,8 +43,15 @@ class ProfilePage extends StatelessWidget {
   );
 }
 
-class AboutPage extends StatelessWidget {
+class AboutPage extends StatefulWidget {
   const AboutPage({super.key});
+
+  @override
+  State<AboutPage> createState() => _AboutPageState();
+}
+
+class _AboutPageState extends State<AboutPage> {
+  late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
 
   @override
   Widget build(BuildContext context) => _DetailScaffold(
@@ -77,7 +85,15 @@ class AboutPage extends StatelessWidget {
               SizedBox(height: 22),
               Divider(height: 1, color: Color(0xFFEAF0F2)),
               SizedBox(height: 16),
-              _AboutItem(label: '版本', value: '1.0.0'),
+              FutureBuilder<PackageInfo>(
+                future: _packageInfo,
+                builder: (context, snapshot) => _AboutItem(
+                  label: '版本',
+                  value: snapshot.hasData
+                      ? snapshot.data!.version
+                      : '读取中…',
+                ),
+              ),
             ],
           ),
         ),

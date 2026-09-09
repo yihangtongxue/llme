@@ -1,7 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+val signingProperties = Properties()
+val signingPropertiesFile = file(
+    "${System.getProperty("user.home")}/os/lianleme-signing.properties",
+)
+if (signingPropertiesFile.exists()) {
+    signingPropertiesFile.inputStream().use(signingProperties::load)
 }
 
 android {
@@ -30,6 +40,24 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        create("release") {
+            if (signingPropertiesFile.exists()) {
+                storeFile = file(
+                    requireNotNull(signingProperties.getProperty("storeFile")),
+                )
+                storePassword = requireNotNull(
+                    signingProperties.getProperty("storePassword"),
+                )
+                keyAlias = requireNotNull(signingProperties.getProperty("keyAlias"))
+                keyPassword = requireNotNull(
+                    signingProperties.getProperty("keyPassword"),
+                )
+                storeType = requireNotNull(signingProperties.getProperty("storeType"))
+            }
+        }
+    }
+
     productFlavors {
         create("dev") {
             dimension = "environment"
@@ -38,14 +66,13 @@ android {
         create("prod") {
             dimension = "environment"
             applicationId = "com.yihang.llme"
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // Only prodRelease is configured with the permanent release key.
         }
     }
 }
@@ -58,4 +85,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    implementation("androidx.core:core:1.16.0")
 }

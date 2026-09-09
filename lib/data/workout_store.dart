@@ -49,7 +49,16 @@ class WorkoutStore extends ChangeNotifier {
   }
 
   List<String> get exercises {
-    final names = ['俯卧撑', '深蹲', '引体向上', ..._custom];
+    final names = [
+      '俯卧撑',
+      '深蹲',
+      '引体向上',
+      '跑步',
+      '爬楼梯',
+      '折刀俯卧撑',
+      '平板支撑',
+      ..._custom,
+    ];
     final counts = <String, int>{};
     for (final r in _records) {
       counts.update(r.exercise, (n) => n + 1, ifAbsent: () => 1);
