@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:llme/data/workout_store.dart';
+import 'package:llme/features/profile/exercise_projects_page.dart';
 import 'package:llme/features/trends/trends_page.dart';
 import 'package:llme/shared/widgets/workout_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -26,6 +27,14 @@ class ProfilePage extends StatelessWidget {
                     child: TrendsPage(store: store, showHeading: false),
                   ),
                 ),
+              ),
+            ),
+            const Divider(height: 1, color: Color(0xFFEAF0F2)),
+            _ProfileTile(
+              title: '项目维护',
+              subtitle: '新增、重命名或删除训练项目',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ExerciseProjectsPage(store: store)),
               ),
             ),
             const Divider(height: 1, color: Color(0xFFEAF0F2)),

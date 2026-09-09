@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:llme/data/exercise_project.dart';
 import 'package:llme/data/workout.dart';
 import 'package:llme/data/workout_store.dart';
 import 'package:llme/shared/widgets/workout_ui.dart';
@@ -58,20 +59,6 @@ class _WorkoutFormState extends State<WorkoutForm> {
       _individual = !_timed && _previous != null && !_previous!.uniform;
       _error = null;
     });
-  }
-
-  Future<void> _addExercise() async {
-    final name = await showDialog<String>(
-      context: context,
-      builder: (_) => _ExerciseDialog(existing: widget.store.exercises),
-    );
-    if (name == null || !mounted) return;
-    try {
-      await widget.store.addExercise(name);
-      if (mounted) _select(name);
-    } catch (_) {
-      if (mounted) showFailure(context);
-    }
   }
 
   void _setCount(int count) => setState(() {
@@ -184,17 +171,13 @@ class _WorkoutFormState extends State<WorkoutForm> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    for (final exercise in widget.store.exercises)
+                    for (final exercise in widget.store.projectsByUsage)
                       ChoiceChip(
-                        label: Text(exercise),
-                        selected: _exercise == exercise,
+                        label: _ExerciseLabel(project: exercise),
+                        selected: _exercise == exercise.name,
                         showCheckmark: false,
-                        onSelected: (_) => _select(exercise),
+                        onSelected: (_) => _select(exercise.name),
                       ),
-                    ActionChip(
-                      avatar: const Icon(Icons.add_rounded, size: 17),
-                      label: const Text('自定义'),
-                      onPressed: _addExercise,
                     ),
                   ],
                 ),
@@ -477,55 +460,24 @@ class _NumberDialogState extends State<_NumberDialog> {
   );
 }
 
-class _ExerciseDialog extends StatefulWidget {
-  const _ExerciseDialog({required this.existing});
-  final List<String> existing;
-  @override
-  State<_ExerciseDialog> createState() => _ExerciseDialogState();
-}
-
-class _ExerciseDialogState extends State<_ExerciseDialog> {
-  final controller = TextEditingController();
-  String? error;
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  void submit() {
-    final name = controller.text.trim();
-    if (name.isEmpty || name.length > 20) {
-      setState(() => error = '请输入 1–20 个字的项目名称');
-    } else if (widget.existing.any(
-      (e) => e.toLowerCase() == name.toLowerCase(),
-    )) {
-      setState(() => error = '这个项目已存在');
-    } else {
-      Navigator.pop(context, name);
-    }
-  }
+class _ExerciseLabel extends StatelessWidget {
+  const _ExerciseLabel({required this.project});
+  final ExerciseProject project;
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('添加训练项目'),
-    content: TextField(
-      controller: controller,
-      autofocus: true,
-      maxLength: 20,
-      decoration: InputDecoration(
-        hintText: '例如：卷腹',
-        helperText: '支持按组数、次数记录的项目',
-        errorText: error,
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 7,
+        height: 7,
+        decoration: BoxDecoration(
+          color: project.isBuiltIn ? accent : action,
+          shape: BoxShape.circle,
+        ),
       ),
-      onSubmitted: (_) => submit(),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.pop(context),
-        child: const Text('取消'),
-      ),
-      TextButton(onPressed: submit, child: const Text('添加')),
+      const SizedBox(width: 6),
+      Text(project.name),
     ],
   );
 }

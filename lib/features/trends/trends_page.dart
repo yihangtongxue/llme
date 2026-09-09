@@ -24,8 +24,11 @@ class _TrendsPageState extends State<TrendsPage> {
     final counts = weeks
         .map((w) => store.daysBetween(w, shiftDay(w, 7)))
         .toList();
+    // Historical records use the project name, so same-named projects share
+    // one trend series rather than producing duplicate dropdown values.
     final trainedExercises = store.exercises
         .where((name) => store.latest(name) != null)
+        .toSet()
         .toList();
     if (!trainedExercises.contains(_exercise)) {
       _exercise = trainedExercises.firstOrNull;

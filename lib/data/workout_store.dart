@@ -1,6 +1,9 @@
+import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:sembast/sembast.dart';
 
+import 'exercise_project.dart';
 import 'workout.dart';
 
 class WorkoutStore extends ChangeNotifier {
@@ -10,35 +13,85 @@ class WorkoutStore extends ChangeNotifier {
   final Database database;
   final DateTime Function() clock;
   final _state = stringMapStoreFactory.store('app').record('state');
+  final _projects = stringMapStoreFactory.store('exercise_projects');
   List<Workout> _records = [];
-  List<String> _custom = [];
+  List<ExerciseProject> _exerciseProjects = [];
   Map<String, String> _energies = {};
   bool busy = false;
   String? _observedDay;
 
   List<Workout> get records => List.unmodifiable(_records);
+  List<ExerciseProject> get exerciseProjects => List.unmodifiable(_exerciseProjects);
+  List<String> get exercises => _exerciseProjects.map((project) => project.name).toList();
   DateTime get today => dayOnly(clock());
   String? energyOn(DateTime date) => _energies[dayKey(date)];
 
   Future<void> load() async {
     final state = await _state.get(database);
+    var legacyCustom = const <String>[];
     if (state != null) {
-      if (state['version'] != 1) throw const FormatException('不支持的数据版本');
-      final records = (state['records'] as List)
-          .map(
-            (value) =>
-                Workout.fromJson(Map<String, dynamic>.from(value as Map)),
-          )
+      final version = state['version'];
+      if (version != 1 && version != 2) throw const FormatException('不支持的数据版本');
+      _records = (state['records'] as List)
+          .map((value) => Workout.fromJson(Map<String, dynamic>.from(value as Map)))
           .toList();
-      final custom = (state['custom'] as List).cast<String>();
-      final energies = Map<String, String>.from(state['energies'] as Map);
-      _records = records;
-      _custom = custom;
-      _energies = energies;
+      _energies = Map<String, String>.from(state['energies'] as Map);
+      if (version == 1) legacyCustom = (state['custom'] as List? ?? const []).cast<String>();
+    }
+    await _loadProjects(legacyCustom);
+    if (state != null && state['version'] == 1) {
+      await _state.put(database, {
+        'version': 2,
+        'records': _records.map((record) => record.toJson()).toList(),
+        'energies': _energies,
+      });
     }
     _sort();
     _observedDay = dayKey(today);
     notifyListeners();
+  }
+
+  Future<void> _loadProjects(List<String> legacyCustom) async {
+    final saved = await _projects.find(database);
+    final projects = <ExerciseProject>[
+      for (final record in saved)
+        ExerciseProject.fromJson(Map<String, dynamic>.from(record.value)),
+    ];
+    final ids = projects.map((project) => project.id).toSet();
+    final additions = <ExerciseProject>[];
+    for (final (id, name) in builtInExerciseProjects) {
+      if (ids.add(id)) additions.add(ExerciseProject(
+        id: id, name: name, source: ExerciseSource.builtIn, createdAt: DateTime(2026),
+      ));
+    }
+    for (final name in legacyCustom) {
+      final id = 'legacy.${name.hashCode}';
+      if (ids.add(id)) additions.add(ExerciseProject(
+        id: id, name: name, source: ExerciseSource.custom, createdAt: DateTime(2026),
+      ));
+    }
+    if (additions.isNotEmpty) {
+      await database.transaction((txn) async {
+        for (final project in additions) {
+          await _projects.record(project.id).put(txn, project.toJson());
+        }
+      });
+    }
+    _exerciseProjects = [...projects, ...additions]
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+  }
+
+  List<ExerciseProject> get projectsByUsage {
+    final projects = List.of(_exerciseProjects);
+    final counts = <String, int>{};
+    for (final record in _records) {
+      counts.update(record.exercise, (count) => count + 1, ifAbsent: () => 1);
+    }
+    projects.sort((a, b) {
+      final count = (counts[b.name] ?? 0).compareTo(counts[a.name] ?? 0);
+      return count != 0 ? count : a.createdAt.compareTo(b.createdAt);
+    });
+    return projects;
   }
 
   void refreshDay() {
@@ -46,29 +99,6 @@ class WorkoutStore extends ChangeNotifier {
       _observedDay = dayKey(today);
       notifyListeners();
     }
-  }
-
-  List<String> get exercises {
-    final names = [
-      '俯卧撑',
-      '深蹲',
-      '引体向上',
-      '跑步',
-      '爬楼梯',
-      '折刀俯卧撑',
-      '平板支撑',
-      ..._custom,
-    ];
-    final counts = <String, int>{};
-    for (final r in _records) {
-      counts.update(r.exercise, (n) => n + 1, ifAbsent: () => 1);
-    }
-    final order = {for (var i = 0; i < names.length; i++) names[i]: i};
-    names.sort((a, b) {
-      final count = (counts[b] ?? 0).compareTo(counts[a] ?? 0);
-      return count != 0 ? count : order[a]!.compareTo(order[b]!);
-    });
-    return names;
   }
 
   Workout? latest(String exercise) {
@@ -79,23 +109,20 @@ class WorkoutStore extends ChangeNotifier {
   }
 
   List<Workout> onDate(DateTime date) =>
-      _records.where((r) => r.date == dayKey(date)).toList();
+      _records.where((record) => record.date == dayKey(date)).toList();
 
   List<Workout> between(DateTime start, DateTime end, {String? exercise}) =>
-      _records
-          .where(
-            (r) =>
-                r.date.compareTo(dayKey(start)) >= 0 &&
-                r.date.compareTo(dayKey(end)) < 0 &&
-                (exercise == null || r.exercise == exercise),
-          )
-          .toList();
+      _records.where((record) =>
+        record.date.compareTo(dayKey(start)) >= 0 &&
+        record.date.compareTo(dayKey(end)) < 0 &&
+        (exercise == null || record.exercise == exercise),
+      ).toList();
 
   int daysBetween(DateTime start, DateTime end) =>
-      between(start, end).map((r) => r.date).toSet().length;
+      between(start, end).map((record) => record.date).toSet().length;
 
   int get streak {
-    final days = _records.map((r) => r.date).toSet();
+    final days = _records.map((record) => record.date).toSet();
     var date = today;
     if (!days.contains(dayKey(date))) date = shiftDay(date, -1);
     var result = 0;
@@ -108,26 +135,17 @@ class WorkoutStore extends ChangeNotifier {
 
   void _sort() => _records.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-  Future<void> _commit(
-    List<Workout> records,
-    List<String> custom,
-    Map<String, String> energies,
-  ) async {
+  Future<void> _commit(List<Workout> records, Map<String, String> energies) async {
     if (busy) throw StateError('正在保存，请稍后');
     busy = true;
     notifyListeners();
     try {
-      await database.transaction((txn) async {
-        await _state.put(txn, {
-          'version': 1,
-          'records': records.map((r) => r.toJson()).toList(),
-          'custom': custom,
-          'energies': energies,
-        });
+      await _state.put(database, {
+        'version': 2,
+        'records': records.map((record) => record.toJson()).toList(),
+        'energies': energies,
       });
-      // Publish only after the transaction succeeds.
       _records = records;
-      _custom = custom;
       _energies = energies;
       _sort();
     } finally {
@@ -137,27 +155,68 @@ class WorkoutStore extends ChangeNotifier {
   }
 
   Future<void> save(Workout workout) async {
-    final records = _records.where((r) => r.id != workout.id).toList()
+    final records = _records.where((record) => record.id != workout.id).toList()
       ..add(workout);
     final energies = Map<String, String>.from(_energies);
     if (workout.energy != null) energies[workout.date] = workout.energy!;
-    await _commit(records, List.of(_custom), energies);
+    await _commit(records, energies);
   }
 
   Future<void> remove(String id) => _commit(
-    _records.where((r) => r.id != id).toList(),
-    List.of(_custom),
-    Map.of(_energies),
+    _records.where((record) => record.id != id).toList(), Map.of(_energies),
   );
 
   Future<void> addExercise(String name) async {
+    final trimmed = _validatedName(name);
+    await _saveProject(ExerciseProject(
+      id: 'custom.${DateTime.now().microsecondsSinceEpoch}.${Random().nextInt(1 << 32)}',
+      name: trimmed,
+      source: ExerciseSource.custom,
+      createdAt: clock(),
+    ));
+  }
+
+  Future<void> renameExercise(ExerciseProject project, String name) =>
+      _saveProject(project.copyWith(name: _validatedName(name)));
+
+  Future<void> deleteExercise(ExerciseProject project) async {
+    if (project.isBuiltIn) throw const FormatException('内置项目不能删除');
+    if (busy) throw StateError('正在保存，请稍后');
+    busy = true;
+    notifyListeners();
+    try {
+      await _projects.record(project.id).delete(database);
+      _exerciseProjects.removeWhere((item) => item.id == project.id);
+    } finally {
+      busy = false;
+      notifyListeners();
+    }
+  }
+
+  String _validatedName(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty || trimmed.length > 20) {
       throw const FormatException('项目名称需为 1–20 个字');
     }
-    if (exercises.any((e) => e.toLowerCase() == trimmed.toLowerCase())) {
-      throw const FormatException('这个项目已存在');
+    return trimmed;
+  }
+
+  Future<void> _saveProject(ExerciseProject project) async {
+    if (busy) throw StateError('正在保存，请稍后');
+    busy = true;
+    notifyListeners();
+    try {
+      await _projects.record(project.id).put(database, project.toJson());
+      final index = _exerciseProjects.indexWhere((item) => item.id == project.id);
+      if (index == -1) {
+        _exerciseProjects.add(project);
+      } else {
+        _exerciseProjects[index] = project;
+      }
+      _exerciseProjects.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    } finally {
+      busy = false;
+      notifyListeners();
     }
-    await _commit(List.of(_records), [..._custom, trimmed], Map.of(_energies));
   }
 }
