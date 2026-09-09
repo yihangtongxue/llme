@@ -95,7 +95,7 @@ void main() {
       await store.save(sample('a', now));
       expect(() => sample('bad', now, reps: [0]), throwsFormatException);
       final builtIn = store.exerciseProjects.firstWhere(
-        (project) => project.isBuiltIn && project.name == '俯卧撑',
+        (project) => project.isBuiltIn && project.name == '折刀俯卧撑',
       );
       expect(
         () => store.renameExercise(builtIn, '修改内置项目'),

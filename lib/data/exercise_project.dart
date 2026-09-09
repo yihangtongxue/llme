@@ -29,8 +29,10 @@ class ExerciseProject {
 
 /// Seed data written only when its id is absent.
 const builtInExerciseProjects = [
-  ('builtin.push-up', '俯卧撑'), ('builtin.squat', '深蹲'),
-  ('builtin.pull-up', '引体向上'), ('builtin.running', '跑步'),
-  ('builtin.stairs', '爬楼梯'), ('builtin.jackknife-push-up', '折刀俯卧撑'),
-  ('builtin.plank', '平板支撑'),
+  ('builtin.standing-arm-circles', '站姿直臂绕肩'),
+  ('builtin.alternating-shoulder-taps', '交替摸肩'),
+  ('builtin.waist-push-up', '腰间俯卧撑'),
+  ('builtin.shoulder-push-up', '冲肩俯卧撑'),
+  ('builtin.jackknife-push-up', '折刀俯卧撑'),
+  ('builtin.chest-cross-stretch', '胸前交叉拉伸'),
 ];

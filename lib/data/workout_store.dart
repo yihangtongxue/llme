@@ -53,10 +53,24 @@ class WorkoutStore extends ChangeNotifier {
 
   Future<void> _loadProjects(List<String> legacyCustom) async {
     final saved = await _projects.find(database);
-    final projects = <ExerciseProject>[
+    final loaded = <ExerciseProject>[
       for (final record in saved)
         ExerciseProject.fromJson(Map<String, dynamic>.from(record.value)),
     ];
+    final builtInIds = builtInExerciseProjects.map((item) => item.$1).toSet();
+    final staleIds = loaded
+        .where((project) => project.isBuiltIn && !builtInIds.contains(project.id))
+        .map((project) => project.id)
+        .toList(growable: false);
+    if (staleIds.isNotEmpty) {
+      await database.transaction((txn) async {
+        for (final id in staleIds) {
+          await _projects.record(id).delete(txn);
+        }
+      });
+    }
+    final projects = loaded
+      ..removeWhere((project) => staleIds.contains(project.id));
     final ids = projects.map((project) => project.id).toSet();
     final additions = <ExerciseProject>[];
     for (final (id, name) in builtInExerciseProjects) {

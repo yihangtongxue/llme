@@ -12,11 +12,11 @@ void main() {
     final restored = WorkoutStore(db);
     try {
       await store.load();
-      await store.addExercise('俯卧撑');
-      await store.addExercise('俯卧撑');
+      await store.addExercise('折刀俯卧撑');
+      await store.addExercise('折刀俯卧撑');
       await restored.load();
       final projects = restored.exerciseProjects
-          .where((project) => project.name == '俯卧撑')
+          .where((project) => project.name == '折刀俯卧撑')
           .toList();
       expect(projects.length, 3);
       expect(projects.map((project) => project.id).toSet().length, 3);

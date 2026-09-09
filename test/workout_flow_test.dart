@@ -22,7 +22,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('今天精力怎么样？').hitTestable(), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(ChoiceChip, '俯卧撑').hitTestable());
+      await tester.tap(
+        find.widgetWithText(ChoiceChip, '腰间俯卧撑').hitTestable(),
+      );
       await tester.pumpAndSettle();
       final save = find.byKey(const ValueKey('save-workout'));
       await tester.ensureVisible(save);
