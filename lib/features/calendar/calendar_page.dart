@@ -116,11 +116,14 @@ class _CalendarPageState extends State<CalendarPage> {
                   children: [
                     for (var col = 0; col < 7; col++)
                       Expanded(
-                        child: _cell(
-                          row * 7 + col - startOffset + 1,
-                          days,
-                          today,
-                          marks,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: _cell(
+                            row * 7 + col - startOffset + 1,
+                            days,
+                            today,
+                            marks,
+                          ),
                         ),
                       ),
                   ],
