@@ -49,12 +49,20 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  Future<void> _checkForUpdate() async {
+  Future<void> _checkForUpdate({bool showNoUpdateFeedback = false}) async {
     final update = await AndroidUpdateService.checkForUpdate();
-    if (!mounted || update == null) return;
+    if (!mounted) return;
+    if (update == null) {
+      if (showNoUpdateFeedback) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('当前没有可用更新。')),
+        );
+      }
+      return;
+    }
     final shouldDownload = await showDialog<bool>(
       context: context,
-      barrierDismissible: !update.isRequired,
+      barrierDismissible: true,
       builder: (context) => AlertDialog(
         title: Text('发现新版本 ${update.versionName}'),
         content: SingleChildScrollView(
@@ -69,19 +77,14 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text('• $note'),
                 ),
-              if (update.isRequired) ...[
-                const SizedBox(height: 8),
-                const Text('当前版本已不再受支持，请完成更新后继续使用。'),
-              ],
             ],
           ),
         ),
         actions: [
-          if (!update.isRequired)
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('稍后再说'),
-            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('稍后再说'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('立即更新'),
@@ -179,7 +182,10 @@ class _AppHomeState extends State<AppHome> with WidgetsBindingObserver {
       final pages = [
         CalendarPage(store: widget.store),
         CheckInPage(store: widget.store),
-        ProfilePage(store: widget.store),
+        ProfilePage(
+          store: widget.store,
+          onCheckUpdate: () => _checkForUpdate(showNoUpdateFeedback: true),
+        ),
       ];
       return Scaffold(
         extendBody: true,

@@ -1,17 +1,17 @@
 class AndroidUpdateInfo {
   const AndroidUpdateInfo({
     required this.versionName,
-    required this.versionCode,
-    required this.minSupportedVersionCode,
     required this.notes,
+    required this.apkUrl,
+    required this.size,
+    required this.sha256,
   });
 
   final String versionName;
-  final int versionCode;
-  final int minSupportedVersionCode;
   final List<String> notes;
-
-  bool get isRequired => false;
+  final String apkUrl;
+  final int size;
+  final String sha256;
 }
 
 enum AndroidUpdateInstallResult { installerOpened, permissionRequired }

@@ -46,9 +46,13 @@ void main() {
       await tester.tap(find.text('日历').hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('本月 1 天有记录').hitTestable(), findsOneWidget);
-      await tester.tap(find.text('趋势').hitTestable());
+      await tester.tap(find.text('我的').hitTestable().last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('训练数据').hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('本周训练').hitTestable(), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('打卡').hitTestable());
       await tester.pumpAndSettle();
       expect(find.text('本周训练').hitTestable(), findsNothing);
@@ -96,10 +100,23 @@ void main() {
       await tester.pumpWidget(LlmeApp(store: store));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(ChoiceChip, '中').hitTestable());
-      await tester.tap(find.text('自定义').hitTestable());
+      await tester.tap(find.text('我的').hitTestable().last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('项目维护').hitTestable());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('新增项目').hitTestable());
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField), '卷腹');
-      await tester.tap(find.text('添加').hitTestable());
+      await tester.tap(find.text('保存').hitTestable());
+      await tester.pumpAndSettle();
+      expect(store.exercises, contains('卷腹'));
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('打卡').hitTestable());
+      await tester.pumpAndSettle();
+      final customChip = find.widgetWithText(ChoiceChip, '卷腹');
+      await tester.ensureVisible(customChip);
+      await tester.tap(customChip.hitTestable());
       await tester.pumpAndSettle();
       final countInput = find.descendant(
         of: find.byType(WorkoutForm),

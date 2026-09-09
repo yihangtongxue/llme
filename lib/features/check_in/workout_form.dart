@@ -178,7 +178,6 @@ class _WorkoutFormState extends State<WorkoutForm> {
                         showCheckmark: false,
                         onSelected: (_) => _select(exercise.name),
                       ),
-                    ),
                   ],
                 ),
                 if (_exercise != null) ...[

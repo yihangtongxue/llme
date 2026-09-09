@@ -25,7 +25,7 @@ class MainActivity : FlutterActivity() {
     private fun handleUpdateCall(call: MethodCall, result: MethodChannel.Result) {
         try {
             when (call.method) {
-                "getVersionCode" -> result.success(installedVersionCode())
+                "getSupportedAbis" -> result.success(Build.SUPPORTED_ABIS.toList())
                 "canRequestPackageInstalls" -> result.success(canInstallPackages())
                 "sha256" -> result.success(sha256(call.requiredPath()))
                 "installApk" -> result.success(installApk(call.requiredPath()))
@@ -38,16 +38,6 @@ class MainActivity : FlutterActivity() {
 
     private fun MethodCall.requiredPath(): String =
         requireNotNull(argument<String>("path")) { "缺少更新包路径" }
-
-    @Suppress("DEPRECATION")
-    private fun installedVersionCode(): Long {
-        val packageInfo = packageManager.getPackageInfo(packageName, 0)
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            packageInfo.longVersionCode
-        } else {
-            packageInfo.versionCode.toLong()
-        }
-    }
 
     private fun sha256(path: String): String {
         val digest = MessageDigest.getInstance("SHA-256")

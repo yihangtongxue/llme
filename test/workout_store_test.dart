@@ -94,7 +94,14 @@ void main() {
       await store.load();
       await store.save(sample('a', now));
       expect(() => sample('bad', now, reps: [0]), throwsFormatException);
-      await expectLater(store.addExercise('俯卧撑'), throwsFormatException);
+      final builtIn = store.exerciseProjects.firstWhere(
+        (project) => project.isBuiltIn && project.name == '俯卧撑',
+      );
+      expect(
+        () => store.renameExercise(builtIn, '修改内置项目'),
+        throwsFormatException,
+      );
+      await expectLater(store.deleteExercise(builtIn), throwsFormatException);
       await expectLater(store.addExercise('   '), throwsFormatException);
       await db.close();
       await expectLater(store.remove('a'), throwsA(anything));

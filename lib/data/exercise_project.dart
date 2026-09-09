@@ -27,8 +27,7 @@ class ExerciseProject {
   );
 }
 
-/// Seed data written only when its id is absent. Afterwards the database is
-/// canonical, so a user-edited built-in project is never overwritten.
+/// Seed data written only when its id is absent.
 const builtInExerciseProjects = [
   ('builtin.push-up', '俯卧撑'), ('builtin.squat', '深蹲'),
   ('builtin.pull-up', '引体向上'), ('builtin.running', '跑步'),

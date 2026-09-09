@@ -169,15 +169,20 @@ class WorkoutStore extends ChangeNotifier {
   Future<void> addExercise(String name) async {
     final trimmed = _validatedName(name);
     await _saveProject(ExerciseProject(
-      id: 'custom.${DateTime.now().microsecondsSinceEpoch}.${Random().nextInt(1 << 32)}',
+      // A 32-bit left shift evaluates to zero on the JavaScript backend.
+      id: 'custom.${DateTime.now().microsecondsSinceEpoch}.${Random().nextInt(0x100000000)}',
       name: trimmed,
       source: ExerciseSource.custom,
       createdAt: clock(),
     ));
   }
 
-  Future<void> renameExercise(ExerciseProject project, String name) =>
-      _saveProject(project.copyWith(name: _validatedName(name)));
+  Future<void> renameExercise(ExerciseProject project, String name) {
+    if (project.isBuiltIn) {
+      throw const FormatException('内置项目不能修改');
+    }
+    return _saveProject(project.copyWith(name: _validatedName(name)));
+  }
 
   Future<void> deleteExercise(ExerciseProject project) async {
     if (project.isBuiltIn) throw const FormatException('内置项目不能删除');

@@ -35,17 +35,19 @@ class ExerciseProjectsPage extends StatelessWidget {
           ),
           children: [
             const Text('项目维护', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: ink)),
-            const SizedBox(height: 7),
-            const Text('内置项目为蓝色；自定义项目为绿色。同名项目可并存。', style: TextStyle(fontSize: 13, color: muted)),
             const SizedBox(height: 22),
-            Surface(
-              padding: EdgeInsets.zero,
+            Material(
+              color: const Color(0xFFFEFFFF),
+              borderRadius: BorderRadius.circular(18),
+              clipBehavior: Clip.antiAlias,
               child: Column(
                 children: [
                   for (final project in store.exerciseProjects) ...[
                     _ProjectTile(
                       project: project,
-                      onRename: () => _editProject(context, store, project: project),
+                      onRename: project.isBuiltIn
+                          ? null
+                          : () => _editProject(context, store, project: project),
                       onDelete: project.isBuiltIn
                           ? null
                           : () => _confirmDelete(context, store, project),
@@ -64,25 +66,29 @@ class ExerciseProjectsPage extends StatelessWidget {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.project, required this.onRename, this.onDelete});
+  const _ProjectTile({required this.project, this.onRename, this.onDelete});
   final ExerciseProject project;
-  final VoidCallback onRename;
+  final VoidCallback? onRename;
   final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) => ListTile(
-    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
     leading: CircleAvatar(
       radius: 6,
       backgroundColor: project.isBuiltIn ? accent : positive,
     ),
     title: Text(project.name, style: const TextStyle(color: ink, fontWeight: FontWeight.w600)),
-    subtitle: Text(project.isBuiltIn ? '内置项目' : '自定义项目', style: const TextStyle(color: muted, fontSize: 12)),
     onTap: onRename,
     trailing: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(tooltip: '重命名', onPressed: onRename, icon: const Icon(Icons.edit_outlined)),
+        if (onRename != null)
+          IconButton(
+            tooltip: '重命名',
+            onPressed: onRename,
+            icon: const Icon(Icons.edit_outlined),
+          ),
         if (onDelete != null)
           IconButton(
             tooltip: '删除',
@@ -100,45 +106,10 @@ Future<void> _editProject(
   WorkoutStore store, {
   ExerciseProject? project,
 }) async {
-  final controller = TextEditingController(text: project?.name);
-  String? error;
   final name = await showDialog<String>(
     context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: Text(project == null ? '新增训练项目' : '重命名项目'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 20,
-          decoration: InputDecoration(hintText: '例如：卷腹', errorText: error),
-          onSubmitted: (_) {
-            final value = controller.text.trim();
-            if (value.isEmpty) {
-              setState(() => error = '请输入项目名称');
-            } else {
-              Navigator.pop(dialogContext, value);
-            }
-          },
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('取消')),
-          FilledButton(
-            onPressed: () {
-              final value = controller.text.trim();
-              if (value.isEmpty) {
-                setState(() => error = '请输入项目名称');
-              } else {
-                Navigator.pop(dialogContext, value);
-              }
-            },
-            child: const Text('保存'),
-          ),
-        ],
-      ),
-    ),
+    builder: (_) => _ProjectNameDialog(project: project),
   );
-  controller.dispose();
   if (name == null || !context.mounted) return;
   try {
     if (project == null) {
@@ -146,9 +117,79 @@ Future<void> _editProject(
     } else {
       await store.renameExercise(project, name);
     }
-  } catch (_) {
+  } on FormatException catch (error) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
+    }
+  } catch (error, stackTrace) {
+    debugPrint('保存训练项目失败：$error');
+    debugPrintStack(stackTrace: stackTrace);
     if (context.mounted) showFailure(context);
   }
+}
+
+class _ProjectNameDialog extends StatefulWidget {
+  const _ProjectNameDialog({this.project});
+
+  final ExerciseProject? project;
+
+  @override
+  State<_ProjectNameDialog> createState() => _ProjectNameDialogState();
+}
+
+class _ProjectNameDialogState extends State<_ProjectNameDialog> {
+  late final TextEditingController _controller;
+  String? _error;
+  bool _closing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.project?.name);
+  }
+
+  @override
+  void dispose() {
+    // The field stays mounted during the dialog's exit animation.
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _close([String? value]) {
+    if (_closing || ModalRoute.of(context)?.isCurrent != true) return;
+    _closing = true;
+    Navigator.pop(context, value);
+  }
+
+  void _submit() {
+    if (_closing) return;
+    final value = _controller.text.trim();
+    if (value.isEmpty || value.length > 20) {
+      setState(() {
+        _error = value.isEmpty ? '请输入项目名称' : '项目名称需为 1–20 个字';
+      });
+      return;
+    }
+    _close(value);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.project == null ? '新增训练项目' : '重命名项目'),
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      maxLength: 20,
+      decoration: InputDecoration(hintText: '例如：卷腹', errorText: _error),
+      onSubmitted: (_) => _submit(),
+    ),
+    actions: [
+      TextButton(onPressed: () => _close(), child: const Text('取消')),
+      FilledButton(onPressed: _submit, child: const Text('保存')),
+    ],
+  );
 }
 
 Future<void> _confirmDelete(

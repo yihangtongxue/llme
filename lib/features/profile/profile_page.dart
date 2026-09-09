@@ -6,8 +6,9 @@ import 'package:llme/shared/widgets/workout_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key, required this.store});
+  const ProfilePage({super.key, required this.store, this.onCheckUpdate});
   final WorkoutStore store;
+  final Future<void> Function()? onCheckUpdate;
 
   @override
   Widget build(BuildContext context) => PageContent(
@@ -42,7 +43,9 @@ class ProfilePage extends StatelessWidget {
               title: '关于应用',
               subtitle: '了解练了么',
               onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const AboutPage()),
+                MaterialPageRoute(
+                  builder: (_) => AboutPage(onCheckUpdate: onCheckUpdate),
+                ),
               ),
             ),
           ],
@@ -53,7 +56,8 @@ class ProfilePage extends StatelessWidget {
 }
 
 class AboutPage extends StatefulWidget {
-  const AboutPage({super.key});
+  const AboutPage({super.key, this.onCheckUpdate});
+  final Future<void> Function()? onCheckUpdate;
 
   @override
   State<AboutPage> createState() => _AboutPageState();
@@ -61,6 +65,17 @@ class AboutPage extends StatefulWidget {
 
 class _AboutPageState extends State<AboutPage> {
   late final Future<PackageInfo> _packageInfo = PackageInfo.fromPlatform();
+  var _isCheckingUpdate = false;
+
+  Future<void> _checkForUpdate() async {
+    if (_isCheckingUpdate || widget.onCheckUpdate == null) return;
+    setState(() => _isCheckingUpdate = true);
+    try {
+      await widget.onCheckUpdate!();
+    } finally {
+      if (mounted) setState(() => _isCheckingUpdate = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => _DetailScaffold(
@@ -101,6 +116,23 @@ class _AboutPageState extends State<AboutPage> {
                   value: snapshot.hasData
                       ? snapshot.data!.version
                       : '读取中…',
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _isCheckingUpdate || widget.onCheckUpdate == null
+                      ? null
+                      : _checkForUpdate,
+                  icon: _isCheckingUpdate
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.system_update_outlined),
+                  label: Text(_isCheckingUpdate ? '正在检查…' : '检查更新'),
                 ),
               ),
             ],
